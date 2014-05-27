@@ -1,0 +1,9 @@
+
+*~
+.Rproj.user
+.Rhistory
+*.Rbuildignore
+*.html
+vignettes/*.md
+vignettes/*.pdf
+vignettes/cache

@@ -1,0 +1,17 @@
+Package: pedvis
+Type: Package
+Title: Simple drawing of pedigrees with dot
+Version: 0.0.1
+Date: 2014-05-18
+Author: Eric C. Anderson
+Maintainer: Who to complain to <eric.anderson@noaa.gov>
+Description: Given a pedigree specification in a data frame this will write a
+    .dot file and run dot on it.  Will make marriage node diagrams and modified
+    factor graphs.
+License: Public Domain.  See TERMS.md
+LazyData: true
+Roxygen: list(wrap = FALSE)
+Suggests:
+    testthat,
+    knitr
+VignetteBuilder: knitr
