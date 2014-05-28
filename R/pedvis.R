@@ -1,12 +1,17 @@
 
-# this is here for testing while developing
-x <- data.frame(
-  Kid = c(letters[1:8], "A", "B", "C", "U", "X"),
-  Pa  = c("A", "A", "A", "B", "B", "C", "D", "E", "1", "2", "3", "4", "5"),
-  Ma  = c("Z", "Z", "Y", "Z", "X", "U", "U", "V", "10", "10", "11", "12", "12"),
-  
-  stringsAsFactors = F
-)
+#' A simple pedigree to use for testing and demonstration
+#' 
+#' This returns a data frame suitable for passing to ped2dot
+#' @param No parameters for now.
+#' @export
+simple_test_ped <- function() {
+  data.frame(
+    Kid = c(letters[1:8], "A", "B", "C", "U", "X"),
+    Pa  = c("A", "A", "A", "B", "B", "C", "D", "E", "1", "2", "3", "4", "5"),
+    Ma  = c("Z", "Z", "Y", "Z", "X", "U", "U", "V", "10", "10", "11", "12", "12"),
+    stringsAsFactors = F
+  )
+}
 
 
 
@@ -28,12 +33,27 @@ x <- data.frame(
 #' labels printed inside their nodes.
 #' @param ObsStyle a named list of the extra style values that you want the observed nodes to have
 #' @param outf Name of the output file (so files will be outf.dot, outf.ps, outf.pdf, etc.)
+#' @examples
+#' # simple pedigree as marriage node diagram
+#' ped2dot(simple_test_ped(), outf = "ped2dot_ex1")
+#' 
+#' # color in some of the individuals as having observed data
+#' ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"), outf = "ped2dot_ex2")
+#' 
+#' # draw the same thing, but make the allele freq factors invisible
+#' ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"), 
+#'         pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis",
+#'         outf = "ped2dot_ex3")
+#'         
 #' @export
 ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid", 
                     ObsNodes = character(0),
                     ShowLabelNodes = character(0),
                     ObsStyle = list(style="filled", fillcolor="gray"),
-                    outf = "pedvis-ped") {
+                    outf = "pedvis-ped",
+                    pfactorNodeStyle = "filled",
+                    pfactorEdgeStyle = "solid"
+                    ) {
   stopifnot(is.data.frame(x)) 
   stopifnot(all(c(pa, ma, kid) %in% names(x)))
   stopifnot(is.character(x[[kid]]))
@@ -58,7 +78,7 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   mn_props <- lapply(x$mn, function(z) list(shape = "circle",
                                                 style = "filled",
                                                 label = "\"\"",
-                                                height = .06,
+                                                height = .09,
                                                 fillcolor = "black"))
   names(mn_props) <- x$mn
   
@@ -87,14 +107,14 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   
   
   # now, make ObsFactor nodes.  These are little squares that sit at the same rank as 
-  # any observed node.
+  # any observed node. 
   ofactor_nodes <- paste("of", ObsNodes, sep="_")
   
   # here we set the properties of the ofactor nodes
   ofactor_props <- lapply(ofactor_nodes, function(z) list(shape = "square",
                                             style = "filled",
                                             label = "\"\"",
-                                            height = .10,
+                                            height = .09,
                                             fillcolor = "black"))
   names(ofactor_props) <- ofactor_nodes
   
@@ -106,19 +126,32 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   # in the population (the prior on genotypes of founders...)
   # first, the founders are any nodes that have no parents listed.  
   # THIS IS WHERE I AM WORKING ON THINGS AT THE MOMENT.
-  #Founders <- 
+  mapa <- unique(c(x[[ma]], x[[pa]]))
+  Founders <- mapa[!(mapa %in% x[[kid]])]
+  pfactor_nodes <- paste("pf", Founders, sep="_")
+  pfactor_props <- lapply(pfactor_nodes, function(z) list(shape = "diamond",
+                                                          style = pfactorNodeStyle,
+                                                          regular = 1,
+                                                          label = "\"\"",
+                                                          height = .10,
+                                                          fillcolor = "black"))
+  names(pfactor_props) <- pfactor_nodes
   
-  # now store all the lines for the styles of nodes
+  # now store all the commands in the dot file for the styles of nodes
   ret$node_props <- prop2string(node_props)
   ret$mn_props <- prop2string(mn_props)
-  ret$ofactor_props <- prop2string(ofactor_props)
+  if(length(ObsNodes) > 0) {ret$ofactor_props <- prop2string(ofactor_props)}
+  ret$pfactor_props <- prop2string(pfactor_props)
   
-  # store the ranks
-  #ret$ofactor_ranks <- ofactor_ranks
+  # store the ranks (not used now that the ofactor nodes go below the individuals)
+  # if(length(ObsNodes) > 0) ret$ofactor_ranks <- ofactor_ranks
   
   # and here we store all the text specifying edges from ofactors to observed nodes
   # note that we pump their weight way up!
-  ret$of2obs_nodes <- paste("\"", ObsNodes, "\"", " -> ", "\"", ofactor_nodes, "\"", "  [dir=none, weight=10000];", sep="")
+  if(length(ObsNodes) > 0) {ret$of2obs_nodes <- paste("\"", ObsNodes, "\"", " -> ", "\"", ofactor_nodes, "\"", "  [dir=none, weight=10000];", sep="")}
+  
+  # and here is text specifying the edges connecting the pfactor nodes to the founders
+  ret$pf2founders <- paste("\"", pfactor_nodes, "\"", " -> ", "\"", Founders, "\"", "  [dir=none, style=", pfactorEdgeStyle,", weight=10000];", sep="")
   
   # here we store all the lines for specifying edges from and to the marriage nodes
   ret$mn2kid_arrows <- paste("\"", x$mn, "\"", " -> ", "\"", x[[kid]], "\"", "  [dir=none];", sep="")
