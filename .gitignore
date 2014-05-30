@@ -7,3 +7,7 @@
 vignettes/*.md
 vignettes/*.pdf
 vignettes/cache
+*.dot
+*.ps
+*.pdf
+fontconfig

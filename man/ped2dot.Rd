@@ -4,8 +4,10 @@
 \title{write a dot file from a pedigree specified in a data frame}
 \usage{
 ped2dot(x, pa = "Pa", ma = "Ma", kid = "Kid", ObsNodes = character(0),
-  ShowLabelNodes = character(0), ObsStyle = list(style = "filled", fillcolor
-  = "gray"), outf = "pedvis-ped", pfactorNodeStyle = "filled",
+  ShowLabelNodes = character(0), ProngNodes = character(0),
+  ObsStyle = list(style = "filled", fillcolor = "gray"),
+  ProngStyle = list(style = "dashed"), ProngEdgeStyle = list(style =
+  "dashed"), outf = "pedvis-ped", pfactorNodeStyle = "filled",
   pfactorEdgeStyle = "solid")
 }
 \arguments{
@@ -28,23 +30,39 @@ genotype data associated with them.}
 \item{ShowLabelNodes}{a character vector of the identifiers of the kids, mas, and pas that should have their
 labels printed inside their nodes.}
 
+\item{ProngNodes}{a character vector of the identifiers of the kids, mas, and pas that should be considered
+prong nodes, and therefore be printed a little differently.  Additionally, the edges incident to a prong node
+will be drawn with ProngEdgeStyle.}
+
 \item{ObsStyle}{a named list of the extra style values that you want the observed nodes to have}
 
-\item{outf}{Name of the output file (so files will be outf.dot, outf.ps, outf.pdf, etc.)}
+\item{ProngStyle}{a named list of the extra style values that you want the prong nodes to have}
+
+\item{ProngEdgeStyle}{a named list of the extra style values that you want the edges connected to prong nodes to have}
+
+\item{outf}{Name of the output file without any suffixes (so files will be outf.dot, outf.ps, outf.pdf, etc.)}
 }
 \description{
 write a dot file from a pedigree specified in a data frame
 }
 \examples{
 # simple pedigree as marriage node diagram
-ped2dot(simple_test_ped(), outf = "ped2dot_ex1")
+junk1 <- ped2dot(simple_test_ped(), outf = "ped2dot_ex1")
 
 # color in some of the individuals as having observed data
-ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"), outf = "ped2dot_ex2")
+junk2 <- ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"), outf = "ped2dot_ex2")
 
 # draw the same thing, but make the allele freq factors invisible
-ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"),
+junk3 <- ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"),
         pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis",
         outf = "ped2dot_ex3")
+
+# like example 2 but with labels on the variable nodes (big circles and squares)
+junk4 <- ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"),
+         outf = "ped2dot_ex4", ShowLabelNodes = unique(unlist(simple_test_ped())))
+
+# put some prong nodes on there
+junk5 <- ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"),
+             outf = "ped2dot_ex5", ShowLabelNodes = unique(unlist(simple_test_ped())), ProngNodes = c("c", "d", "e", "E", "V", "3", "11", "12", "4"))
 }
 
