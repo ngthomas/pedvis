@@ -1,0 +1,129 @@
+---
+title: "Pedigree Figures for Coastwide Meeting"
+author: Eric C. Anderson
+date: April, 2014
+output: 
+  html_document:
+    toc: true
+    highlight: pygments
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    highlight: pygments
+---
+
+Note that to get this to really be a vignette, I must insert this at the top:
+```
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Running on chinook data and comparing to Colony}
+-->
+```
+
+```{r}
+library(pedvis)
+```
+
+
+## Making some full-sibling families.
+We are going to have to see how well we can make a few full sibling families here and whether we will have to 
+make an upper and a lower band to get enough in.
+
+Let's start with 3 singletons, 2 doubletons, 2 triples, 1 quad and 1 quint.  Here we make a data frame for that
+```{r}
+sibsizes <- list( one = c(1, 1, 1, 2, 2, 3), two = c(3, 4, 5))  # + 1  # add the one there to make a prong on each one
+lapply(names(sibsizes), function(z) {
+x <- sibsizes[[z]]
+pa <- rep(letters[1:length(x)], x)
+ma <- rep(LETTERS[1:length(x)], x)
+ped <- data.frame(Kid = as.character(1:sum(x)),
+                  Pa = pa,
+                  Ma = ma,
+                  stringsAsFactors = F)
+dump <- ped2dot(ped, outf = paste("full-sib-ped", z, sep="-"), pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis", ObsNodes = paste(1:nrow(ped)))
+
+# make the pedigrees with no observed data
+dump <- ped2dot(ped, outf = paste("full-sib-ped-no-obs", z, sep="-"), pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis")
+})
+```
+
+
+Down here we are going to make the same pedigrees with the observed data but add some prongs to them.
+```{r}
+sibsizes <- list( one = c(1, 1, 1, 2, 2, 3) + 1, two = c(3, 4, 5) + 1)  # + 1  # add the one there to make a prong on each one
+lapply(names(sibsizes), function(z) {
+x <- sibsizes[[z]]
+pa <- rep(letters[1:length(x)], x)
+ma <- rep(LETTERS[1:length(x)], x)
+ped <- data.frame(Kid = as.character(1:sum(x)),
+                  Pa = pa,
+                  Ma = ma,
+                  stringsAsFactors = F)
+dump <- ped2dot(ped, outf = paste("full-sib-ped-with-prongs", z, sep="-"), pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis", ObsNodes = paste(1:nrow(ped)), ProngNodes = as.character(cumsum(x)))
+})
+```
+
+
+Down here I want to make two layers of 11 pronged singletons:
+```{r}
+sibsizes <- list( one = rep(2, 11), two = rep(2, 11))  
+lapply(names(sibsizes), function(z) {
+x <- sibsizes[[z]]
+pa <- rep(letters[1:length(x)], x)
+ma <- rep(LETTERS[1:length(x)], x)
+ped <- data.frame(Kid = as.character(1:sum(x)),
+                  Pa = pa,
+                  Ma = ma,
+                  stringsAsFactors = F)
+dump <- ped2dot(ped, outf = paste("11-with-prongs", z, sep="-"), pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis", ObsNodes = paste(1:nrow(ped)), ProngNodes = as.character(cumsum(x)))
+})
+```
+
+
+
+Now, let's make a gnarly pedigree using spip.  First I simulated some data (I don't know what the seeds were):
+```
+2014-06-02 07:50 /pedvis/--% (master) pwd
+/Users/eriq/Documents/git-repos/pedvis
+2014-06-02 23:27 /pedvis/--% (master) spip -A 1 -s 1 -f 1 -m 1 --fem-prob-repro 1 --male-prob-repro 1 -T 5 --initial-males 5 --initial-females 5 --cohort-size const  16 --fem-rep-disp-par .4  --mate-fidelity 0 | awk 'BEGIN {print "Kid Pa Ma"} /^PEDIGREE/ && $3 >= 3 {print $5, $6, $7}'  > spip_out.txt
+# then I moved that to a file:
+# /Users/eriq/Documents/git-repos/pedvis/hairy_pedigree_raw.txt
+```
+So, now we can read it and look at it, making anyone born in year 4 or 5 observed:
+```{r}
+ped <- read.table("hairy_pedigree_raw.txt", header=T, stringsAsFactors = F)
+ped2dot(ped, outf = "hairy_ped1", pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis", ObsNodes = ped$Kid[grep("[MF][45].*", ped$Kid)])
+```
+I will want to get rid of a few individuals, so let us plot that with the labels:
+```{r}
+ped2dot(ped, outf = "hairy_ped1", pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis", ObsNodes = ped$Kid[grep("[MF][45].*", ped$Kid)], ShowLabelNodes = unique(c(ped$Kid, ped$Ma, ped$Pa)))
+```
+Which tells us that lines with `M3_0` and `M3_2` can be eliminated.  Good
+```{r}
+ped <- ped[!(ped$Kid == "M3_0" | ped$Kid == "M3_2"), ]
+```
+And now we want to add prongs too.  This is easy. Add a kid for every pair of mated parents:
+```{r}
+mpairs <- t(simplify2array(strsplit(unique(paste(ped$Pa, ped$Ma, sep="-")), "-")))
+colnames(mpairs) <- c("Pa", "Ma")
+mpairs <- as.data.frame(mpairs, stringsAsFactors = F)
+Prongs <- paste("Pr", 1:nrow(mpairs), sep="")
+mpairs$Kid <- Prongs
+pedp <- rbind(ped, mpairs)
+ped2dot(pedp, outf = "hairy_ped_with_prongs", pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis", ObsNodes = pedp$Kid[grep("[MF][45].*", pedp$Kid)], ProngNodes = Prongs)
+```
+And we can also make that with invisible prongs
+```{r}
+ped2dot(pedp, outf = "hairy_ped_with_invis_prongs", pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis", ObsNodes = pedp$Kid[grep("[MF][45].*", pedp$Kid)], ProngNodes = Prongs, ProngStyle = list(style="invis"), ProngEdgeStyle = list(style="invis"))
+```
+And we can also add the o-factors and p-factors on there
+```{r}
+ped2dot(pedp, outf = "hairy_ped_as_factor_graph", ObsNodes = pedp$Kid[grep("[MF][45].*", pedp$Kid)], ProngNodes = Prongs, Draw_O_factors = T)
+```
+
+Finally let us make a single individual with parents and granparents as prongs
+```{r}
+kpp <- data.frame(Kid = c("a", "d", "g"), Pa = c("b", "e", "a"), Ma = c("c", "f", "d"), stringsAsFactors = F)
+ped2dot(kpp, outf = "single-kid-with-parent-prongs", ObsNodes = "g", ProngNodes = letters[1:6], pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis")
+```
+That has dashed lines above the founders, which is a hassle to change at this point, so I am going to just hack the dot file.

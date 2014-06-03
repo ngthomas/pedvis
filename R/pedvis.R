@@ -40,7 +40,7 @@ simple_test_ped <- function() {
 #' @param outf Name of the output file without any suffixes (so files will be outf.dot, outf.ps, outf.pdf, etc.)
 #' @examples
 #' # simple pedigree as marriage node diagram
-#' junk1 <- ped2dot(simple_test_ped(), outf = "ped2dot_ex1")
+#' junk1 <- ped2dot(simple_test_ped(), outf = "ped2dot_ex1", pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis")
 #' 
 #' # color in some of the individuals as having observed data
 #' junk2 <- ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"), outf = "ped2dot_ex2")
@@ -67,7 +67,8 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
                     ProngEdgeStyle = list(style="dashed"),
                     outf = "pedvis-ped",
                     pfactorNodeStyle = "filled",
-                    pfactorEdgeStyle = "solid"
+                    pfactorEdgeStyle = "solid",
+                    Draw_O_factors = FALSE
                     ) {
   stopifnot(is.data.frame(x)) 
   stopifnot(all(c(pa, ma, kid) %in% names(x)))
@@ -92,7 +93,8 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   ret$pream <- c("digraph xxx {",
              "label =\"  \"",
              "ranksep=1.0;",
-             "nodesep=1.0")
+             "nodesep=1.0",
+             "compress=false")
                           
   
   # here we set the properties of the marriage nodes
@@ -160,13 +162,13 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   # now store all the commands in the dot file for the styles of nodes
   ret$node_props <- prop2string(node_props)
   ret$mn_props <- prop2string(mn_props)
-  if(length(ObsNodes) > 0) {ret$ofactor_props <- prop2string(ofactor_props)}
+  if(length(ObsNodes) > 0 && Draw_O_factors == TRUE) {ret$ofactor_props <- prop2string(ofactor_props)}
   ret$pfactor_props <- prop2string(pfactor_props)
   
   
   # and here we store all the text specifying edges from ofactors to observed nodes
   # note that we pump their weight way up!
-  if(length(ObsNodes) > 0) {ret$of2obs_nodes <- paste("\"", ObsNodes, "\"", " -> ", "\"", ofactor_nodes, "\"", "  [dir=none, weight=10000];", sep="")}
+  if(length(ObsNodes) > 0 && Draw_O_factors == TRUE) {ret$of2obs_nodes <- paste("\"", ObsNodes, "\"", " -> ", "\"", ofactor_nodes, "\"", "  [dir=none, weight=10000];", sep="")}
   
   # and here is text specifying the edges connecting the pfactor nodes to the founders
   # default edge style

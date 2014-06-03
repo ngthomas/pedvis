@@ -8,7 +8,7 @@ ped2dot(x, pa = "Pa", ma = "Ma", kid = "Kid", ObsNodes = character(0),
   ObsStyle = list(style = "filled", fillcolor = "gray"),
   ProngStyle = list(style = "dashed"), ProngEdgeStyle = list(style =
   "dashed"), outf = "pedvis-ped", pfactorNodeStyle = "filled",
-  pfactorEdgeStyle = "solid")
+  pfactorEdgeStyle = "solid", Draw_O_factors = FALSE)
 }
 \arguments{
 \item{x}{the data frame holding the pedigree.  There must be at
@@ -47,7 +47,7 @@ write a dot file from a pedigree specified in a data frame
 }
 \examples{
 # simple pedigree as marriage node diagram
-junk1 <- ped2dot(simple_test_ped(), outf = "ped2dot_ex1")
+junk1 <- ped2dot(simple_test_ped(), outf = "ped2dot_ex1", pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis")
 
 # color in some of the individuals as having observed data
 junk2 <- ped2dot(simple_test_ped(), ObsNodes = c("a", "b", "f", "C", "D", "Z", "U", "10"), outf = "ped2dot_ex2")
