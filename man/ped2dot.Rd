@@ -8,7 +8,8 @@ ped2dot(x, pa = "Pa", ma = "Ma", kid = "Kid", ObsNodes = character(0),
   ObsStyle = list(style = "filled", fillcolor = "gray"),
   ProngStyle = list(style = "dashed"), ProngEdgeStyle = list(style =
   "dashed"), outf = "pedvis-ped", pfactorNodeStyle = "filled",
-  pfactorEdgeStyle = "solid", Draw_O_factors = FALSE)
+  pfactorEdgeStyle = "solid", Draw_O_factors = FALSE, RankSep = 1,
+  NodeSep = 1)
 }
 \arguments{
 \item{x}{the data frame holding the pedigree.  There must be at

@@ -68,7 +68,9 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
                     outf = "pedvis-ped",
                     pfactorNodeStyle = "filled",
                     pfactorEdgeStyle = "solid",
-                    Draw_O_factors = FALSE
+                    Draw_O_factors = FALSE,
+                    RankSep = 1.0,
+                    NodeSep = 1.0
                     ) {
   stopifnot(is.data.frame(x)) 
   stopifnot(all(c(pa, ma, kid) %in% names(x)))
@@ -92,8 +94,8 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   # allow function input to modify this.
   ret$pream <- c("digraph xxx {",
              "label =\"  \"",
-             "ranksep=1.0;",
-             "nodesep=1.0",
+             paste("ranksep=", RankSep, ";", sep=""),
+             paste("nodesep=", NodeSep, sep=""),
              "compress=false")
                           
   
@@ -132,7 +134,7 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   node_props[ShowLabelNodes] <- tmp
   
   
-  # now, make ObsFactor nodes.  These are little squares that sit at the same rank as 
+  # now, make ObsFactor nodes.  These are little squares that sit at one rank below  
   # any observed node. 
   ofactor_nodes <- paste("of", ObsNodes, sep="_")
   
@@ -168,7 +170,10 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   
   # and here we store all the text specifying edges from ofactors to observed nodes
   # note that we pump their weight way up!
-  if(length(ObsNodes) > 0 && Draw_O_factors == TRUE) {ret$of2obs_nodes <- paste("\"", ObsNodes, "\"", " -> ", "\"", ofactor_nodes, "\"", "  [dir=none, weight=10000];", sep="")}
+  if(length(ObsNodes) > 0 && Draw_O_factors == TRUE) {
+    obsf_edgestyle <- rep("", length(ObsNodes))
+    obsf_edgestyle[ObsNodes %in% ProngNodes] <- "style = dashed,";  # this lets us prong out the obs-nodes if need be
+    ret$of2obs_nodes <- paste("\"", ObsNodes, "\"", " -> ", "\"", ofactor_nodes, "\"", "  [", obsf_edgestyle, " dir=none, weight=10000];", sep="")}
   
   # and here is text specifying the edges connecting the pfactor nodes to the founders
   # default edge style
@@ -188,6 +193,7 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   
   
   
+  
   ret$mn2kid_arrows <- paste("\"", x$mn, "\"", " -> ", "\"", x[[kid]], "\"", x$mn2kid_style, sep="")
   ret$par2mn_arrows <- c(unique(paste("\"", x[[pa]], "\"", " -> ", "\"", x$mn, "\"", x$par2mn_style, sep="")),
                          unique(paste("\"", x[[ma]], "\"", " -> ", "\"", x$mn, "\"", x$par2mn_style, sep="")) )
@@ -202,8 +208,11 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   DOTFile <- paste(outf, "dot", sep = ".")
   PSFile <- paste(outf, "ps", sep = ".")
   PDFFile <- paste(outf, "pdf", sep = ".")
+  SVGFile <- paste(outf, "svg", sep = ".")
+  SVG_CALL <- paste("dot -Tsvg", DOTFile, "-o",  SVGFile)
   CALL <- paste("dot -Tps", DOTFile, "-o",  PSFile, ";",  "epstopdf",  PSFile, ";",  "open",  PDFFile)
   
+  system(SVG_CALL)
   system(CALL)
   
   # down here return more than just ret...(later...)
