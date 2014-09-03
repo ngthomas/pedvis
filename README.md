@@ -36,21 +36,28 @@ devtools::install_github("pedvis", "eriqande")
 
 Then, if that was successful, here you can see what the input is all about and do some examples
 ```r
+library(pedvis)  # load the package
+
 # here is a simple input pedigree
 simple_test_ped()
-
-# note that the names of the individuals have to be 
-# strings NOT factors or integers.  So, use stringsAsFactors = FALSE
-# if reading in a data frame.
 ```
+Note that the names of the individuals have to be 
+*strings* NOT factors or integers.  So, use `stringsAsFactors = FALSE`
+if reading in a data frame with `read.table`.
 
-Here we draw it as a marriage node diagram and we put labels on everyone and
+Here we draw that simple pedigree as a marriage node diagram and we put labels on everyone and
 we make some of the p-node factors invisible (that should sound cryptic...).
-And we make a few of them shaded by having observed data on them.
+And we make a few of the individuals shaded by telling the function we have observed data on them.
 ```r
 stp <- simple_test_ped()
 all_names <- unique(unlist(stp))
-out_list <- ped2dot(stp, ShowLabelNodes = all_names, pfactorNodeStyle = "invis", pfactorEdgeStyle = "invis", ObsNodes = c(letters[1:8], 1:5, 10:12), outf = "testy")
+out_list <- ped2dot(stp, 
+                    ShowLabelNodes = all_names, 
+                    pfactorNodeStyle = "invis", 
+                    pfactorEdgeStyle = "invis", 
+                    ObsNodes = c(letters[1:8], 1:5, 10:12), 
+                    outf = "testy"
+                    )
 ```
 
 Note that running this function will create a file called testy.dot in the current working directory.  It will 
