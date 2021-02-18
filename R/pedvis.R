@@ -60,8 +60,10 @@ simple_test_ped <- function() {
 #' @export
 ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid", 
                     ObsNodes = character(0),
+                    highlightNodes = character(0),
                     ShowLabelNodes = character(0),
                     ProngNodes = character(0),
+                    uniSexNodes = character(0),
                     ObsStyle = list(style="filled", fillcolor="gray"),
                     ProngStyle = list(style="dashed"),
                     ProngEdgeStyle = list(style="dashed"),
@@ -70,7 +72,14 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
                     pfactorEdgeStyle = "solid",
                     Draw_O_factors = FALSE,
                     RankSep = 1.0,
-                    NodeSep = 1.0
+                    NodeSep = 1.0,
+                    highlight.unobs.edge = FALSE,
+                    highlight.unobs.style= NA,
+                    opt.turnoff.edge = FALSE,
+                    m_node.invis.ls = list(), 
+                    invis.ls.kid = list(),
+                    invis.ls.pa = list(),
+                    invis.ls.ma = list()
                     ) {
   stopifnot(is.data.frame(x)) 
   stopifnot(all(c(pa, ma, kid) %in% names(x)))
@@ -93,18 +102,31 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   # this is for the dot preamble.  Could modify eventually to 
   # allow function input to modify this.
   ret$pream <- c("digraph xxx {",
+                 "node [fontsize=28]",
+                 "edge [fontname=Helvetica, fontsize=29]",
              "label =\"  \"",
              paste("ranksep=", RankSep, ";", sep=""),
              paste("nodesep=", NodeSep, sep=""),
              "compress=false")
                           
-  
   # here we set the properties of the marriage nodes
-  mn_props <- lapply(x$mn, function(z) list(shape = "circle",
+  mn_props <- lapply(x$mn, function(z) {
+    
+    if(z %in% m_node.invis.ls) {
+      list(shape = "circle",
                                                 style = "filled",
                                                 label = "\"\"",
                                                 height = 0.225,
-                                                fillcolor = "black"))
+                                                fillcolor = "white",
+           color = "white") }
+    else {
+      list(shape = "circle",
+           style = "filled",
+           label = "\"\"",
+           height = 0.225,
+           fillcolor = "black")
+    }
+    })
   names(mn_props) <- x$mn
   
   # here we set the properties of the nodes that represent individuals in the pedigree
@@ -122,6 +144,7 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   # consistency at this point.)
   node_props[x[[pa]]] <- lapply(node_props[x[[pa]]], function(z) {z$shape = "box"; z$height = .73; z})
 
+  node_props[uniSexNodes] <- lapply(node_props[uniSexNodes], function(z) {z$shape = "diamond"; z$height = .8; z})
   
   # now, anyone listed as observed gets the ObsStyle applied:
   node_props[ObsNodes] <- lapply(node_props[ObsNodes], function(x) c(x, ObsStyle))
@@ -192,11 +215,35 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   x$par2mn_style[ (x[[ma]] %in% ProngNodes) | (x[[pa]] %in% ProngNodes)] <- paste(" [dir = none,", list2keyval(ProngEdgeStyle), "]")
   
   
+  if (highlight.unobs.edge) {
+    x$mn2kid_style = " [dir = none];"  # set the default style for this edge
+    x$pa2mn_style = " [dir = none];"  # set the default style for this kind of edge
+    x$ma2mn_style = " [dir = none];"  # set the default style for this kind of edge
+    
+    ## mod style for edge for that indiv being kid 
+    x$mn2kid_style[x[[kid]] %in% highlightNodes] <- paste(" [dir = none,  penwidth=6, color = \"#006bce\"]")
+    
+    ## adding specific edge 
+    pa.style <- left_join(tibble(indiv=x[[pa]][x[[pa]] %in% highlightNodes]), highlight.unobs.style) %>%
+      mutate(label.str = ifelse(is.na(label.str), "", label.str))
+    ma.style <- left_join(tibble(indiv=x[[ma]][x[[ma]] %in% highlightNodes]), highlight.unobs.style) %>%
+      mutate(label.str = ifelse(is.na(label.str), "", label.str))
+      
+    
+    x$pa2mn_style[x[[pa]] %in% highlightNodes] <- paste(" [dir = none,",pa.style$label.str,"  penwidth=6, color = \"#006bce\"]")
+    x$ma2mn_style[x[[ma]] %in% highlightNodes] <- paste(" [dir = none,",ma.style$label.str,"  penwidth=6, color = \"#006bce\"]")
+  }
   
+  
+  if (opt.turnoff.edge) {
+    x$mn2kid_style[x[[kid]] %in% invis.ls.kid] <- paste(" [dir = none,  penwidth=0, style=invis]")
+    x$pa2mn_style[x[[pa]] %in% invis.ls.pa] <- paste(" [dir = none, penwidth=0, style=invis]")
+    x$ma2mn_style[x[[ma]] %in% invis.ls.ma] <- paste(" [dir = none,  penwidth=0, style=invis]")
+  }
   
   ret$mn2kid_arrows <- paste("\"", x$mn, "\"", " -> ", "\"", x[[kid]], "\"", x$mn2kid_style, sep="")
-  ret$par2mn_arrows <- c(unique(paste("\"", x[[pa]], "\"", " -> ", "\"", x$mn, "\"", x$par2mn_style, sep="")),
-                         unique(paste("\"", x[[ma]], "\"", " -> ", "\"", x$mn, "\"", x$par2mn_style, sep="")) )
+  ret$par2mn_arrows <- c(unique(paste("\"", x[[pa]], "\"", " -> ", "\"", x$mn, "\"", x$pa2mn_style, sep="")),
+                         unique(paste("\"", x[[ma]], "\"", " -> ", "\"", x$mn, "\"", x$ma2mn_style, sep="")) )
   
   
   
@@ -210,7 +257,13 @@ ped2dot <- function(x, pa = "Pa", ma = "Ma", kid = "Kid",
   PDFFile <- paste(outf, "pdf", sep = ".")
   SVGFile <- paste(outf, "svg", sep = ".")
   SVG_CALL <- paste("dot -Tsvg", DOTFile, "-o",  SVGFile)
-  CALL <- paste("dot -Tps", DOTFile, "-o",  PSFile, ";",  "epstopdf",  PSFile, ";",  "open",  PDFFile)
+  
+  
+  if (Sys.info()["sysname"] != "Linux") {
+  CALL <- paste("dot -Tps", DOTFile, "-o",  PSFile, ";", "epstopdf",  PSFile, ";",  "open",  PDFFile)
+  } else {
+    CALL <- paste("dot -Tps", DOTFile, "-o",  PSFile, ";",  "epstopdf",  PSFile, ";")
+  }
   
   system(SVG_CALL)
   system(CALL)
@@ -246,3 +299,4 @@ prop2string <- function(y) {
 list2keyval <- function(z) {
   paste(sapply(names(z), function(y) paste(y,z[y], sep="=")), collapse = ", ")
 }
+
